@@ -1,5 +1,5 @@
 This project provides a library to talk to QHYCCD cameras from Linux.
 This is an attempt to improve on the many deficiencies of the SDK
-provided by QHYCCD.
+provided by QHYCCD, at least in the current state.
 
 
