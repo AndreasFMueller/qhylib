@@ -6,6 +6,7 @@
 #include <reg.h>
 #include <qhydebug.h>
 #include <utils.h>
+#include <cstring>
 
 namespace qhy {
 

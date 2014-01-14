@@ -3,13 +3,24 @@
  *
  * (c) 2014 Prof Dr Andreas Mueller; Hochschule Rapperswil
  */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif /* HAVE_CONFIG_H */
+
+#ifdef HAVE_MATH_H
+#include <math.h>
+#endif /* HAVE_MATH_H */
+
+#ifdef HAVE_PTHREAD_H
+#include <pthread.h>
+#endif /* HAVE_PTHREAD_H */
+
 #include <qhylib.h>
 #include <device.h>
 #include <qhydebug.h>
-#include <libusb-1.0/libusb.h>
-#include <math.h>
-#include <pthread.h>
 #include <utils.h>
+
+#include <libusb-1.0/libusb.h>
 
 namespace qhy {
 
@@ -94,7 +105,7 @@ unsigned int	PDC201::transfer(unsigned char endpoint,
 			buffer, length, &transferred_length, DC201_TIMEOUT);
 	if (rc) {
 		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "transfer failed: %s",
-			libusb_strerror((enum libusb_error)rc));
+			usbcause(rc).c_str());
 		throw USBError(rc);
 	}
 	//qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "%d bytes transferred",

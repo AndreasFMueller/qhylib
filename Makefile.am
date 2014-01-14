@@ -4,5 +4,5 @@
 # (c) 2014 Prof Dr Andreas Mueller
 # $Id$
 #
-SUBDIRS = include lib src
+SUBDIRS = include lib src doc
 

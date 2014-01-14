@@ -2,6 +2,6 @@
 # sample configuration used in development
 #
 CFLAGS="-Wall -O2 -g"
-CXXFLAGS="-Wall -O2 -g"
+CXXFLAGS="-Wall -O2 -g --std=c++11"
 export CFLAGS CXXFLAGS
-./configure
+./configure --enable-usbdebug

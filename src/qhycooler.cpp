@@ -3,23 +3,24 @@
  *
  * (c) 2014 Prof Dr Andreas Mueller, Hochschule Rapperswil
  */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif /* HAVE_CONFIG_H */
+
 #include <cstdlib>
 #include <iostream>
-#include <unistd.h>
 #include <qhydebug.h>
 #include <device.h>
-#include <sys/time.h>
+#include <utils.h>
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif /* HAVE_UNISTD_H */
+#ifdef HAVE_SIGNAL_H
+#include <signal.h>
+#endif /* HAVE_SIGNAL_H */
 
 namespace qhy {
-
-static double	gettime() {
-	double	t;
-	struct timeval	tv;
-	gettimeofday(&tv, NULL);
-	t = tv.tv_sec;
-	t += 0.0000001 * tv.tv_usec;
-	return t;
-}
 
 DevicePtr	device;
 

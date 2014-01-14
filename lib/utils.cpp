@@ -3,11 +3,17 @@
  *
  * (c) 2014 Prof Dr Andreas Mueller, Hochschule Rapperswil
  */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif /* HAVE_CONFIG_H */
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif /* HAVE_SYS_TIME_H */
+
 #include <utils.h>
 #include <qhydebug.h>
 #include <sstream>
 #include <iomanip>
-#include <sys/time.h>
 
 namespace qhy {
 

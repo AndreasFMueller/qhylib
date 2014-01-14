@@ -21,8 +21,31 @@ AC_PROG_LIBTOOL
 AC_CHECK_LIB([m], [sqrt])
 AC_CHECK_LIB([usb-1.0], [libusb_bulk_transfer])
 
-AC_CHECK_HEADERS([unistd.h sys/time.h syslog.h])
+# probe for some special functions that not all USB library versions have
+AC_CHECK_FUNC([libusb_strerror],[
+AC_DEFINE([HAVE_LIBUSB_STRERROR], 1, [libusb has libusb_strerror function])
+],[
+AC_DEFINE([HAVE_LIBUSB_STRERROR], 0, [libusb has libusb_strerror function])
+])
 
-AC_CONFIG_FILES([Makefile include/Makefile lib/Makefile
-        src/Makefile])
+AC_CHECK_FUNC([libusb_set_debug],[
+AC_DEFINE([HAVE_LIBUSB_SET_DEBUG], 1, [libusb has libusb_set_debug function])
+],[
+AC_DEFINE([HAVE_LIBUSB_SET_DEBUG], 0, [libusb has libusb_set_debug function])
+])
+
+# enable usb debugging
+AC_ARG_ENABLE(usbdebug,
+[AS_HELP_STRING([--enable-usbdebug], [turn on USB low level debugging])],
+[
+AC_DEFINE([USBDEBUG], 1, [Whether or not to enable USB debugging])
+],[
+AC_DEFINE([USBDEBUG], 0, [Whether or not to enable USB debugging])
+])
+
+AC_CHECK_HEADERS([unistd.h sys/time.h syslog.h signal.h pthread.h math.h])
+
+AC_CONFIG_FILES([Makefile include/Makefile lib/Makefile src/Makefile
+	doc/Makefile])
+
 AC_OUTPUT

@@ -3,6 +3,9 @@
  *
  * (c) 2014 Prof Dr Andreas Mueller, Hochschule Rapperswil
  */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif /* HAVE_CONFIG_H */
 #include <device.h>
 #include <qhylib.h>
 #include <qhydebug.h>
@@ -17,6 +20,10 @@ PDevice::PDevice(unsigned short idVendor, unsigned short idProduct) {
 	// initialize context and handle, to make sure 
 	ctx = NULL;
 	handle = NULL;
+
+	// initialize the pointers
+	_dc201 = NULL;
+	_camera = NULL;
 
 	// initialize the USB context for this device
 	int	rc = libusb_init(&ctx);
@@ -33,10 +40,12 @@ PDevice::PDevice(unsigned short idVendor, unsigned short idProduct) {
 		throw USBError(LIBUSB_ERROR_NOT_FOUND);
 	}
 
-#if 0
+#if HAVE_LIBUSB_SET_DEBUG
+#if USBDEBUG
 	if (qhydebuglevel == LOG_DEBUG) {
-		libusb_set_debug(ctx, LIBUSB_LOG_LEVEL_DEBUG);
+		libusb_set_debug(ctx, 4 /* LIBUSB_LOG_LEVEL_DEBUG */);
 	}
+#endif
 #endif
 
 	// get the device

@@ -8,6 +8,7 @@
 #include <qhydebug.h>
 #include <buffer.h>
 #include <camera.h>
+#include <cstring>
 
 namespace qhy {
 
@@ -99,7 +100,7 @@ int	PCamera::readpatches(Buffer& target) {
 		patch_number, target.length());
 
 	// verify that the buffer is large enough
-	int	l = patch_size * total_patches;
+	unsigned int	l = patch_size * total_patches;
 	if (target.length() < l) {
 		throw std::runtime_error("buffer is not large enough");
 	}

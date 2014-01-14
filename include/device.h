@@ -8,13 +8,25 @@
 #ifndef qhy_device_h
 #define qhy_device_h
 
-#include <qhylib.h>
-#include <libusb-1.0/libusb.h>
-#include <memory>
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif /* HAVE_CONFIG_H */
+#ifdef HAVE_PTHREAD_H
 #include <pthread.h>
+#endif /* HAVE_PTHREAD_H */
+
+// qhylib headers
+#include <qhylib.h>
 #include <reg.h>
-#include <set>
 #include <buffer.h>
+
+// libusb
+#include <libusb-1.0/libusb.h>
+
+// standard C++ headers
+#include <memory>
+#include <set>
+
 
 namespace qhy {
 
