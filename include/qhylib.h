@@ -82,7 +82,7 @@ protected:
 	 * \brief cache value for PWM
 	 *
 	 * PWM values can only be written, not read. If we want to
-	 * be able to query the DC201 object for the curretn PWM
+	 * be able to query the DC201 object for the current PWM
 	 * value, we have to cache it here.
  	 */
 	unsigned char	_pwm;
