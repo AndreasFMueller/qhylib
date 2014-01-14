@@ -43,6 +43,15 @@ AC_DEFINE([USBDEBUG], 1, [Whether or not to enable USB debugging])
 AC_DEFINE([USBDEBUG], 0, [Whether or not to enable USB debugging])
 ])
 
+# enable range checking
+AC_ARG_ENABLE(rangecheck,
+[AS_HELP_STRING([--enable-rangecheck], [turn on range checking])],
+[
+AC_DEFINE([ENABLE_RANGECHECK], 1, [Whether or not to enable range checking])
+],[
+AC_DEFINE([ENABLE_RANGECHECK], 0, [Whether or not to enable range checking])
+])
+
 AC_CHECK_HEADERS([unistd.h sys/time.h syslog.h signal.h pthread.h math.h])
 
 AC_CONFIG_FILES([Makefile include/Makefile lib/Makefile src/Makefile

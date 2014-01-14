@@ -87,7 +87,13 @@ protected:
  	 */
 	unsigned char	_pwm;
 public:
+	/**
+	 * \brief Get the current PWM value for the TEC cooler
+	 */
 	unsigned char	pwm() const { return _pwm; }
+	/**
+	 * \brief Set the PWM value for the TEC cooler
+	 */
 	virtual void	pwm(unsigned char p) = 0;
 private:
 	// private copy/assign prevents copying
@@ -97,17 +103,49 @@ protected:
 	DC201();
 	virtual ~DC201();
 public:
+	/**
+	 * \brief Retrieve the current temperature of the CCD chip
+	 */
 	virtual double	temperature() = 0;
 private:
+	/**
+	 * \brief Flag indicationg whether a regulator is active
+ 	 */
 	bool	_cooler;
 public:
+	/**
+	 * \brief Find out whether the temperature regulation is active
+	 */
 	bool	cooler() const { return _cooler; }
+	/**
+	 * \brief Start the cooler
+	 *
+	 * The DC201 powers the TEC cooler of the camera, but this hardware has
+	 * now intelligence to regulate the temperature. This method starts
+	 * a separate thread that implements a controller to regulate
+	 * the temperature to the set temperature.
+	 */
 	virtual void	startCooler() = 0;
+	/**
+	 * \brief Stop temperature regulation
+	 */
 	virtual void	stopCooler() = 0;
 protected:
+	/**
+	 * \brief Set the temperature to regulate
+	 */
 	double	_settemperature;
 public:
+	/**
+	 * \brief Get the set temperature
+	 */
 	const double&	settemperature() const { return _settemperature; }
+	/**
+	 * \brief Set the temperature
+	 *
+	 * If the regulator is active, the temperature will change and
+	 * eventually be regulated to the new set temperature.
+	 */
 	virtual void	settemperature(const double& t) = 0;
 };
 
@@ -150,10 +188,28 @@ class ImageBuffer {
 	unsigned int	buffersize;
 	unsigned short	*_pixelbuffer;
 public:
+	/**
+	 * \brief Get the width of the image
+	 */
 	unsigned int	width() const { return _width; }
+	/**
+	 * \brief Get the height of the image
+ 	 */
 	unsigned int	height() const { return _height; }
+	/**
+	 * \brief Get the number of pixels in the image
+	 */
 	unsigned int	npixels() const { return _npixels; }
+	/**
+ 	* \brief Get the size of the pixel buffer in bytes
+	 */
 	unsigned int	size() const { return buffersize; }
+	/**
+	 * \brief Access the pixels directly
+	 *
+	 * Preferably, the range checked methods below should be used
+	 * for pixel access.
+	 */
 	unsigned short	*pixelbuffer() const { return _pixelbuffer; }
 private:
 	ImageBuffer(const ImageBuffer& other);

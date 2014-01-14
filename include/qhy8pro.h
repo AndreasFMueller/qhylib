@@ -8,6 +8,13 @@
 
 namespace qhy {
 
+/**
+ * \brief Camera class for the QHY8PRO camera
+ *
+ * This class encapsulates all the methods needed to handle the QHY8PRO
+ * camera. This camera has a somewhat strange CCD from SONY, which needs
+ * rather extensive demultiplexing. 
+ */
 class Qhy8Pro : public CameraOld {
 public:
 	Qhy8Pro(PDevice &device);

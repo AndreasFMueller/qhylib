@@ -108,6 +108,11 @@ void	Qhy8Pro::demux(ImageBuffer& image, const Buffer& buffer) {
 	}
 }
 
+/**
+ * \brief Demultiplexing for unbinned images
+ *
+ * This code comes more or less straight from the SDK provided by QHYCCD
+ */
 void	Qhy8Pro::demux11(ImageBuffer& image, const Buffer& buffer) {
 	int	PixShift = reg.TopSkipPix;
 	int	width = imagesize().first;
@@ -147,6 +152,14 @@ void	Qhy8Pro::demux11(ImageBuffer& image, const Buffer& buffer) {
     }
 }
 
+/**
+ * \brief Demultiplexing for 2x2 binned images
+ *
+ * Note that binning is only partially done on chip, only binning
+ * in the horizontal direction is done by the CCD. The other direction
+ * is done numerically in the demultiplexing function.
+ * This code comes more or less straight from the SDK provided by QHYCCD
+ */
 void	Qhy8Pro::demux22(ImageBuffer& image, const Buffer& buffer) {
 	int	PixShift = reg.TopSkipPix;
 	int	width = imagesize().first;
@@ -175,6 +188,14 @@ void	Qhy8Pro::demux22(ImageBuffer& image, const Buffer& buffer) {
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "demultiplexing complete");
 }
 
+/**
+ * \brief Demultiplexing for 4x4 binned images
+ *
+ * Note that binning is only partially done on chip, only 2x2 binning
+ * is done by the CCD. The remaining binning is done numerically in the
+ * demultiplexing function.
+ * This code comes more or less straight from the SDK provided by QHYCCD
+ */
 void	Qhy8Pro::demux44(ImageBuffer& image, const Buffer& buffer) {
 	int	PixShift = reg.TopSkipPix;
 	int	width = imagesize().first;

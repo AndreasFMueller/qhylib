@@ -3,6 +3,10 @@
  *
  * (c) 2014 Prof Dr Andreas Mueller, Hochschule Rapperswil
  */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif /* HAVE_CONFIG_H */
+
 #include <buffer.h>
 #include <stdexcept>
 #include <string.h>
@@ -26,22 +30,34 @@ Buffer::~Buffer() {
 }
 
 /**
- * \brief Access a buffer
+ * \brief Access a buffer, no changes allowed
+ *
+ * If range checking is compiled in, this method performs range checking,
+ * which improves on direct use of the pointer returned by the data()
+ * method.
  */
 const unsigned char&	Buffer::operator[](unsigned int i) const {
+#if ENABLE_RANGECHECK
 	if (i > _length) {
 		throw std::range_error("index too large");
 	}
+#endif /* ENABLE_RANGECHECK */
 	return _data[i];
 }
 
 /**
- * \brief Access a buffer
+ * \brief Modifying access a buffer
+ *
+ * If range checking is compiled in, this method performs range checking,
+ * which improves on direct use of the pointer returned by the data()
+ * method.
  */
 unsigned char&	Buffer::operator[](unsigned int i) {
+#if ENABLE_RANGECHECK
 	if (i > _length) {
 		throw std::range_error("index too large");
 	}
+#endif /* ENABLE_RANGECHECK */
 	return _data[i];
 }
 

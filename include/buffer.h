@@ -14,10 +14,16 @@ namespace qhy {
 class Buffer {
 	unsigned long	_length;
 public:
+	/**
+ 	 * \brief Retrieve the length of the buffer
+ 	 */
 	unsigned long	length() const { return _length; }
 private:
 	unsigned char	*_data;
 public:
+	/**
+	 * \brief Unchecked access to the underlying data buffer
+	 */
 	unsigned char	*data() const { return _data; }
 private:
 	Buffer(const Buffer& other);
@@ -36,6 +42,9 @@ class BufferPointer {
 	Buffer&	_buffer;
 	unsigned long	_offset;
 public:
+	/**
+	 * \brief Current offset of the pointer into the buffer
+	 */
 	unsigned long	offset() const { return _offset; }
 public:
 	BufferPointer(Buffer& buffer);
