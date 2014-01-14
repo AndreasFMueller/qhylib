@@ -45,8 +45,8 @@ int	qhycamera_main(int argc, char *argv[]) {
 
 	// create the camera
 	Camera&	camera = device->camera();
-	camera.mode(BinningMode(4, 4));
-	camera.exposuretime(0.02);
+	camera.mode(BinningMode(1, 1));
+	camera.exposuretime(0.2);
 	camera.startExposure();
 	ImageBufferPtr	image = camera.getImage();
 

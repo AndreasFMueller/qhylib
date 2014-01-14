@@ -1,5 +1,21 @@
 This project provides a library to talk to QHYCCD cameras from Linux.
-This is an attempt to improve on the many deficiencies of the SDK
-provided by QHYCCD, at least in the current state.
 
+More information about QHYCCD cameras can be found on http://www.qhyccd.com
+
+QHYCCD also works on an SDK to more easily access their cameras. In the
+current state, however, this SDK still has many deficiencies which make it
+unsuitable for my AstroPhotography project. This project is intended as
+a stopgap measure to provide a robust driver library so that a QHY driver
+can be written for the AstroPhotography project. Accordingly, it does not
+have as wide a scope as the QHYCCD SDK.
+
+To develop this driver library, the SDK was used as a kind of documentation
+of the interface to the QHYCCD cameras. There apparently does not exist any
+documentation whatsoever, so one really has to read the SDK source code to 
+learn about the cameras. Currently the SDK only supports a limited range of
+cameras, and I myself only have a QHY8PRO camera, so I currently cannot extend
+this project to support other cameras. If you have a different camera, you
+are welcome to subclass CameraOld/CameraNew into a camera specific class and
+provide the methods needed to support a new camera (read qhy8pro,{h,cpp} for
+more information).
 
