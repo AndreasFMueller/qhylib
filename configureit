@@ -1,0 +1,7 @@
+#
+# sample configuration used in development
+#
+CFLAGS="-Wall -O2 -g"
+CXXFLAGS="-Wall -O2 -g"
+export CFLAGS CXXFLAGS
+./configure
