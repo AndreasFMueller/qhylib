@@ -14,7 +14,7 @@ qhycooler_DEPENDENCIES = ../lib/libqhyccd.la
 qhycooler_LDADD = -L../lib -lqhyccd
 
 test:	qhycamera
-	./qhycamera -d -b 4 -e 0.05 -p 0x6003 test.fits
+	./qhycamera -d -e 1 -p 0x6003 test.fits
 
 coolertest:	qhycooler
 	./qhycooler -d

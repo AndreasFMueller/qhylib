@@ -4,6 +4,8 @@ Change Log for the qhy project
 	* add doxygen documentation
 	* Linux port
 	* autoconf improvements
+	* download speed selection
+	* timeout fix
 
 20140111:
 	* project set up

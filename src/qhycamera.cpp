@@ -39,6 +39,7 @@ static void	usage(const char *progname) {
 	std::cout << "  -b bin       binning mode, take a bin x bin "
 		"binned image" << std::endl;
 	std::cout << "  -e seconds   exposure time in seconds" << std::endl;
+	std::cout << "  -f           fast download speed" << std::endl;
 	std::cout << "  -p cameraid  set the USB product id of the camera";
 	std::cout << std::endl;
 	std::cout << "               known cameras:" << std::endl;
@@ -68,7 +69,8 @@ int	qhycamera_main(int argc, char *argv[]) {
 	int	binning = 1;
 	BinningMode	binningmode(binning, binning);
 	double	exposuretime = 1;
-	while (EOF != (c = getopt(argc, argv, "de:b:p:h?")))
+	enum Camera::DownloadSpeed	speed = Camera::Low;
+	while (EOF != (c = getopt(argc, argv, "de:b:p:h?f")))
 		switch (c) {
 		case 'd':
 			qhydebuglevel = LOG_DEBUG;
@@ -82,6 +84,9 @@ int	qhycamera_main(int argc, char *argv[]) {
 			break;
 		case 'p':
 			idProduct = getProduct(optarg);
+			break;
+		case 'f':
+			speed = Camera::High;
 			break;
 		case 'h':
 		case '?':
@@ -111,6 +116,7 @@ int	qhycamera_main(int argc, char *argv[]) {
 	Camera&	camera = device->camera();
 	camera.mode(binningmode);
 	camera.exposuretime(exposuretime);
+	camera.downloadSpeed(speed);
 	camera.startExposure();
 	ImageBufferPtr	image = camera.getImage();
 

@@ -82,6 +82,7 @@ void	PCamera::mode(const BinningMode& m) {
  * \param seconds	desired exposure time in seconds
  */
 void	PCamera::exposuretime(double seconds) {
+	_exposuretime = seconds;
 	reg.Exptime = 1000 * seconds;
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "exposure time: %d ms",
 		reg.Exptime);
@@ -107,6 +108,8 @@ int	PCamera::readpatches(Buffer& target) {
 
 	// compute the timeout which we want to apply
 	int	timeout = 1000 * (_exposuretime + 30);
+	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "exposuretime = %f, timeout %d",
+		_exposuretime, timeout);
 
 	// allocate a buffer for reading data 
 	Buffer	buffer(patch_size);
@@ -152,6 +155,9 @@ void	PCamera::startExposure() {
 	_device.controlwrite(0xb3, 0, 0, buf, 1, 500);
 }
 
+/**
+ * \brief Compute the image size with this binning mode
+ */
 ImageSize	PCamera::imagesize() const {
 	int	width = size.width() / _mode.x();
 	int	height = size.height() / _mode.y();
@@ -221,6 +227,22 @@ void	PCamera::demux(ImageBuffer& image, const Buffer& buffer) {
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "copy %d bytes pixels", l);
 	memcpy(image.pixelbuffer(), buffer.data(), l);
 //	logbuffer((unsigned char *)image.pixelbuffer(), l);
+}
+
+/**
+ * \brief Set the download speed
+ */
+void	PCamera::downloadSpeed(enum DownloadSpeed speed) {
+	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "download speed: %s",
+		(speed == Camera::Low) ? "low" : "high");
+	switch (speed) {
+	case Low:
+		reg.DownloadSpeed = 0;
+		break;
+	case High:
+		reg.DownloadSpeed = 1;
+		break;
+	}
 }
 
 } // namespace qhy

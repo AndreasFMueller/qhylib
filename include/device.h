@@ -123,6 +123,7 @@ public:
 	void	startExposure();
 	void	cancelExposure();
 	virtual ImageBufferPtr	getImage();
+	void	downloadSpeed(enum DownloadSpeed speed);
 protected:
 	void	sendregisters();
 	virtual void	demux(ImageBuffer& image, const Buffer& buffer);

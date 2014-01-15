@@ -278,6 +278,8 @@ public:
 	virtual void	startExposure() = 0;
 	virtual void	cancelExposure() = 0;
 	virtual ImageBufferPtr	getImage() = 0;
+	enum DownloadSpeed { Low = 0, High = 1 };
+	virtual void	downloadSpeed(enum DownloadSpeed speed) = 0;
 private:
 	Camera(const Camera& other);
 	Camera&	operator=(const Camera& other);
