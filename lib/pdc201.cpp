@@ -369,6 +369,23 @@ double	PDC201::cooltolimit(double limit) {
 
 /**
  * \brief Main method for the cooler
+ *
+ * This method implements a PID controller, although with some quirks.
+ *
+ * Since the PWM value must be between 0 and 255, the controller very
+ * often operates in a regime where it cannot be linear. In particular,
+ * because it cannot drive the control input outside that range, it
+ * takes much longer to correct an error, and as a consequence, the 
+ * integral (I) term builds up heavily.
+ *
+ * To correct that, the integral term is reset to zero whenever the
+ * error changes sign. The purpose of the integral term is to remove
+ * a remaining offset, but when the error has changed sign, there is
+ * no "remaining offset", so the integral term should be 0. At the
+ * same time, since the control variable may now be completely different
+ * from that actual pwm value, and it would take the controller quite
+ * some time to get it back into the reasonable range, we reset the
+ * control variable to the current pwm value.
  */
 void	PDC201::main() {
 	
@@ -378,93 +395,64 @@ void	PDC201::main() {
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "start the regulator thread");
 	pthread_mutex_unlock(&mutex);
 
-#if 0
-	// the current temperature offsets defines what we do first
-	double	delta = temperature() - _settemperature;
-
-	// first cool or let heat as quickly as possible, then do the oposite
-	// the difference in speed determines the initial PWM
-	time_t	start = time(NULL);
-	double	vup, vdown;
-	try {
-		if (delta < 0) {
-			qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "heating required");
-			vup = cooltolimit(_settemperature);
-			vup = cooltolimit(_settemperature + 1);
-			vdown = cooltolimit(_settemperature);
-		} else {
-			qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "cooling required");
-			vdown = cooltolimit(_settemperature);
-			vdown = cooltolimit(_settemperature - 1);
-			vup = cooltolimit(_settemperature);
-		}
-	} catch (std::exception& x) {
-		qhydebug(LOG_DEBUG, DEBUG_LOG, 0,
-			"initial cooling phase stopped");
-		pwm(0);
-		return;
-	}
-	time_t	end = time(NULL);
-	qhydebug(LOG_DEBUG, DEBUG_LOG, 0,
-		"target temperature reached: %f in %d seconds",
-		temperature(), end - start);
-
-	// set the PWM to the previously computed target value
-	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "vup = %f, vdown = %f", vup, vdown);
-	double	y = vup / vdown;
-	double	initialpwm = 255 * y / (1 + y);
-	pwm(newpwm(initialpwm, 255));
-	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "initial PWM %f", initialpwm);
-#endif
-
 	// the following code implements a PID controller for the temperature
 	// A PID controller needs the integral and the derivative of the
 	// errors we allocate some variables here for this purpose
 	double	previous_temperature = temperature();
 	double	current_temperature = previous_temperature;
-	double	previous_error = 0, current_error = 0;
+	double	previous_error = previous_temperature - _settemperature;
+	double	current_error = previous_error;
 	double	dt = 3.1;
 	double	differential = 0, previous_differential = 0;
+	double	integral = 0;
 
-	// The PID controller is defined by three constant gain factors
-	double	T = 71 / (2 * M_PI);
+	// if cooling is needed, we turn it up to a value proportional
+	// to the difference
+	double	initialpwm = 2 * current_error;
+	if (initialpwm > 255) {
+		pwm(255);
+	} else if (initialpwm < 0) {
+		pwm(0);
+	} else {
+		unsigned char	p = initialpwm;
+		pwm(p);
+	}
+	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "initial pwm: %d", (int)pwm());
+
+	// The PID controller is defined by three constant gain factors,
+	// which are derived from T, T_t and k_s, which were determined
+	// by experiments with the qhytransfer program
+	double	T = 71;
 	double	T_t = 4;
 	double	k_s = 10. / 32.;
 
-#if 0
+	// these values are standard Ziegler-Nichols gain factors
 	double	k_P = 1.2 * (1 / k_s) * (T / T_t);
 	double	T_I = 2 * T_t;
 	double	T_D = 0.5 * T_t;
 
 	double	k_I = k_P / T_I;
 	double	k_D = k_P * T_D;
-#endif
-#if 0
-	double	k_P = 0.9 * (1 / k_s) * (T / T_t);
-	double	T_I = 3.33 * T_t;
-	double	T_D = 0;
 
-	double	k_I = k_P / T_I;
-	double	k_D = 0;
-#endif
-#if 1
-	double	k_P = (1 / k_s) * (T / T_t);
-	double	T_I = T_t;
-	double	T_D = 0;
+	// however, it turned out that they are a bit too aggressive, so
+	// they were tuned by hand. The following values seem to work well
+	// for at least one QHY8PRO
+	k_P *= 0.4;
+	k_I *= 0.2;
+	k_D *= 0.25;
+	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "k_P = %f, k_I = %f, k_D = %f",
+		k_P, k_I, k_D);
 
-	double	k_I = 0;
-	double	k_D = 0;
-#endif
-
-	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "k_P = %f, T_I = %f, T_D = %f",
-		k_P, T_I, T_D);
-
-	// we also need the control variable, which may be outside the
+	// We also need the control variable, which may be outside the
 	// range of what we can actually control, but the newpwm function
-	// will take care of that
+	// will take care of that. The control variable only contains the
+	// the P and D terms, because we want to be able to reset the
+	// I term to zero on a zero crossing of the error. So we keep the
+	// I term separate in the integral variable, and add it when we
+	// compute the actual PWM value to apply to the camera using the
+	// newpwm function.
 	double	control = pwm(); // get the current cooler PWM value
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "initial control: %f", control);
-	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "endthread = %s", (endthread) ? "true" : "false");
 
 	// keep checking the 
 	while (!endthread) {
@@ -479,25 +467,37 @@ void	PDC201::main() {
 		previous_error = current_error;
 		current_error = current_temperature - _settemperature;
 		previous_differential = differential;
-		double	differential = (current_error - previous_error) / dt;
+		double	differential = (previous_error - current_error) / dt;
+
+		// whenever the error changes sign, we reset the integral
+		if ((previous_error * current_error) < 0) {
+			qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "integral reset");
+			integral = 0;
+			control = pwm();
+		}
+		integral += current_error * dt;
 
 		// regulator code: compute the new PWM value
 		double	d_control
-			= k_P * (current_error - previous_error)
-			+ k_I * current_error * dt
-			+ k_D * (previous_differential - differential);
+			= k_P * (current_error - previous_error);
+		// If we get close to the target, we stat to use the D term.
+		// This is intended to decrease overshoot
+		if (fabs(current_error) < 10) {
+			d_control += k_D * (previous_differential - differential);
+		}
 		control += d_control;
 		qhydebug(LOG_DEBUG, DEBUG_LOG, 0,
-			"error: %f, diff: %f, d_control: %f, control: %f",
-			current_error, differential, d_control, control);
+			"error: %f, diff: %f, integral: %f, d_control: %f, "
+			"control: %f",
+			current_error, differential, integral, d_control,
+			control);
 
-		// compute a pwm value that can actuall be applied to the
-		// the chip
-		unsigned char	newpwmvalue = newpwm(control, 255);
+		// Compute a pwm value that can actuall be applied to the
+		// the chip. At this point, we add in the integral term
+		unsigned char	newpwmvalue = newpwm(control + k_I * integral,
+			255);
 		pwm(newpwmvalue);
 		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "new PWM value: %d", _pwm);
-		if (control < 0) { control = 0; }
-		if (control > 255) { control = 255; }
 
 		// test whether the thread should end
 		if (endthread) {
@@ -508,7 +508,7 @@ void	PDC201::main() {
 
 		// now wait at most one second or until some other function
 		// signals that we should 
-		interruptiblesleep(3.1);
+		interruptiblesleep(dt);
 	}
 
 	// clean up

@@ -36,9 +36,11 @@ class temppoint {
 public:
 	unsigned char	pwm;
 	double	temp;
+	double	error;
 	temppoint(DC201& dc201) {
 		pwm = device->dc201().pwm();
 		temp = device->dc201().temperature();
+		error = temp - device->dc201().settemperature();
 	}
 };
 
@@ -48,6 +50,8 @@ std::ostream&	operator<<(std::ostream& out, const temppoint& tp) {
 	out << (int)tp.pwm;
 	out << ",";
 	out << tp.temp;
+	out << ",";
+	out << tp.error;
 	return out;
 }
 
@@ -88,7 +92,7 @@ int	qhycooler_main(int argc, char *argv[]) {
 	device->dc201().pwm(0);
 
 	int	counter = 20;
-#if 1
+#if 0
 	while (counter--) {
 		(*f) << temppoint(device->dc201()) << std::endl;
 		sleep(1);
@@ -123,12 +127,12 @@ int	qhycooler_main(int argc, char *argv[]) {
 	// start the regulator and try to reach absolute temperature 280
 	device->dc201().startCooler();
 
-	int	oldt = 0, newt = 5;
+	int	oldt = 0, newt = 3;
 	for (int i = 0; i < 24; i++) {
 		double	temp = 290 - 10 * newt;
 		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "switch cooler to %.0f K", temp);
 		device->dc201().settemperature(temp);
-		counter = 600;
+		counter = 300;
 		while ((counter--) && (device->dc201().cooler())) {
 			sleep(1);
 			(*f) << temppoint(device->dc201()) << std::endl;
