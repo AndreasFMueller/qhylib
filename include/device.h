@@ -82,10 +82,7 @@ private:
 	double	cooltolimit(double limit);
 public:
 	void	main();
-private:
-	bool	_cooler;
 public:
-	bool	cooler() const { return _cooler; }
 	void	startCooler();
 	void	stopCooler();
 public:

@@ -9,6 +9,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 #include <qhydebug.h>
 #include <device.h>
 #include <utils.h>
@@ -29,19 +30,48 @@ void	inthandler(int sig) {
 	device->dc201().pwm(0);
 }
 
+static double	starttime = gettime();
+
+class temppoint {
+public:
+	unsigned char	pwm;
+	double	temp;
+	temppoint(DC201& dc201) {
+		pwm = device->dc201().pwm();
+		temp = device->dc201().temperature();
+	}
+};
+
+std::ostream&	operator<<(std::ostream& out, const temppoint& tp) {
+	out << (gettime() - starttime);
+	out << ",";
+	out << (int)tp.pwm;
+	out << ",";
+	out << tp.temp;
+	return out;
+}
+
 /**
  * \brief Main function for the qhyccd program
  */
 int	qhycooler_main(int argc, char *argv[]) {
 	qhydebugthreads = 1;
 	qhydebugtimeprecision = 3;
+	
 	int	c;
-	while (EOF != (c = getopt(argc, argv, "d")))
+	std::ostream	*f = NULL;
+	while (EOF != (c = getopt(argc, argv, "dc:")))
 		switch (c) {
 		case 'd':
 			qhydebuglevel = LOG_DEBUG;
 			break;
+		case 'c':
+			f = new std::ofstream(optarg);
+			break;
 		}
+	if (f == NULL) {
+		f = &std::cout;
+	}
 
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "qhycooler started");
 
@@ -51,17 +81,16 @@ int	qhycooler_main(int argc, char *argv[]) {
 	double	temp = device->dc201().temperature();
 	std::cout << "temperature is " << temp << std::endl;
 
-	double	starttime = gettime();
+	starttime = gettime();
 
 	// turn of the cooler and plot data for a minute (to verify it is
 	// turned off)
 	device->dc201().pwm(0);
 
 	int	counter = 20;
-#if 0
+#if 1
 	while (counter--) {
-		temp = device->dc201().temperature();
-		std::cout << (gettime() - starttime) << "," << temp << std::endl;
+		(*f) << temppoint(device->dc201()) << std::endl;
 		sleep(1);
 	}
 #endif
@@ -73,13 +102,7 @@ int	qhycooler_main(int argc, char *argv[]) {
 		device->dc201().pwm(testpwm);
 		counter = 30;
 		while (counter--) {
-			temp = device->dc201().temperature();
-			std::cout << (gettime() - starttime);
-			std::cout << ",";
-			std::cout << (int)testpwm;
-			std::cout << ",";
-			std::cout << temp;
-			std::cout << std::endl;
+			(*f) << temppoint(device->dc201()) << std::endl;
 			sleep(1);
 		}
 	}
@@ -88,9 +111,8 @@ int	qhycooler_main(int argc, char *argv[]) {
 	device->dc201().pwm(0);
 	counter = 240;
 	while (counter--) {
-		temp = device->dc201().temperature();
-		std::cout << (gettime() - starttime) << "," << temp << std::endl;
 		sleep(1);
+		(*f) << temppoint(device->dc201()) << std::endl;
 	}
 #endif
 
@@ -99,46 +121,22 @@ int	qhycooler_main(int argc, char *argv[]) {
 	signal(SIGINT, inthandler);
 
 	// start the regulator and try to reach absolute temperature 280
-	device->dc201().settemperature(280.);
 	device->dc201().startCooler();
-	counter = 600;
-	while ((counter--) && (device->dc201().cooler())) {
-		sleep(1);
-		temp = device->dc201().temperature();
-		std::cout << (gettime() - starttime);
-		std::cout << ",";
-		std::cout << (int)device->dc201().pwm();
-		std::cout << ",";
-		std::cout << temp;
-		std::cout << std::endl;
-	}
 
-	device->dc201().settemperature(270.);
-	device->dc201().startCooler();
-	counter = 600;
-	while ((counter--) && (device->dc201().cooler())) {
-		sleep(1);
-		temp = device->dc201().temperature();
-		std::cout << (gettime() - starttime);
-		std::cout << ",";
-		std::cout << (int)device->dc201().pwm();
-		std::cout << ",";
-		std::cout << temp;
-		std::cout << std::endl;
-	}
-
-	device->dc201().settemperature(280.);
-	device->dc201().startCooler();
-	counter = 600;
-	while ((counter--) && (device->dc201().cooler())) {
-		sleep(1);
-		temp = device->dc201().temperature();
-		std::cout << (gettime() - starttime);
-		std::cout << ",";
-		std::cout << (int)device->dc201().pwm();
-		std::cout << ",";
-		std::cout << temp;
-		std::cout << std::endl;
+	int	oldt = 0, newt = 5;
+	for (int i = 0; i < 24; i++) {
+		double	temp = 290 - 10 * newt;
+		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "switch cooler to %.0f K", temp);
+		device->dc201().settemperature(temp);
+		counter = 600;
+		while ((counter--) && (device->dc201().cooler())) {
+			sleep(1);
+			(*f) << temppoint(device->dc201()) << std::endl;
+		}
+		oldt = newt;
+		do {
+			newt = random() % 6;
+		} while (newt == oldt);
 	}
 
 	// turn of the cooler

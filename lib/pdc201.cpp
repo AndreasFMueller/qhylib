@@ -371,12 +371,14 @@ double	PDC201::cooltolimit(double limit) {
  * \brief Main method for the cooler
  */
 void	PDC201::main() {
+	
 	// we lock the mutx, which will block the thread until the mutex
 	// is release in the startCooler method
 	pthread_mutex_lock(&mutex);
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "start the regulator thread");
 	pthread_mutex_unlock(&mutex);
 
+#if 0
 	// the current temperature offsets defines what we do first
 	double	delta = temperature() - _settemperature;
 
@@ -413,85 +415,81 @@ void	PDC201::main() {
 	double	initialpwm = 255 * y / (1 + y);
 	pwm(newpwm(initialpwm, 255));
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "initial PWM %f", initialpwm);
+#endif
 
 	// the following code implements a PID controller for the temperature
 	// A PID controller needs the integral and the derivative of the
 	// errors we allocate some variables here for this purpose
-	double	previous_voltage = voltage();
+	double	previous_temperature = temperature();
+	double	current_temperature = previous_temperature;
 	double	previous_error = 0, current_error = 0;
-	double	integral = 0;
 	double	dt = 3.1;
+	double	differential = 0, previous_differential = 0;
 
 	// The PID controller is defined by three constant gain factors
-	double	Ku = 0.0365;
-	double	Tu = 56;
-#if 0	/* CLASSIC */
-	double	Kp = 0.6 * Ku;
-	double	Ki = 2 * Kp / Tu;
-	double	Kd = Kp * Tu / 8;
+	double	T = 71 / (2 * M_PI);
+	double	T_t = 4;
+	double	k_s = 10. / 32.;
+
+#if 0
+	double	k_P = 1.2 * (1 / k_s) * (T / T_t);
+	double	T_I = 2 * T_t;
+	double	T_D = 0.5 * T_t;
+
+	double	k_I = k_P / T_I;
+	double	k_D = k_P * T_D;
 #endif
-#if 0	/* PESSEN */
-	double	Kp = 0.7 * Ku;
-	double	Ki = 2.5 * Kp / Tu;
-	double	Kd = 0.15 * Kp * Tu;
+#if 0
+	double	k_P = 0.9 * (1 / k_s) * (T / T_t);
+	double	T_I = 3.33 * T_t;
+	double	T_D = 0;
+
+	double	k_I = k_P / T_I;
+	double	k_D = 0;
 #endif
-#if 0	/* some overshoot */
-	double	Kp = 0.33 * Ku;
-	double	Ki = 2 * Kp / Tu;
-	double	Kd = Kp * Tu / 3;
+#if 1
+	double	k_P = (1 / k_s) * (T / T_t);
+	double	T_I = T_t;
+	double	T_D = 0;
+
+	double	k_I = 0;
+	double	k_D = 0;
 #endif
-#if 0	/* no overshoot */
-	double	Kp = 0.2 * Ku;
-	double	Ki = 2 * Kp / Tu;
-	double	Kd = Kp * Tu / 3;
-#endif
-	double	Kp = 0.02;
-	double	Ki = 0.002;
-	double	Kd = 0.2;
+
+	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "k_P = %f, T_I = %f, T_D = %f",
+		k_P, T_I, T_D);
 
 	// we also need the control variable, which may be outside the
 	// range of what we can actually control, but the newpwm function
 	// will take care of that
 	double	control = pwm(); // get the current cooler PWM value
+	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "initial control: %f", control);
+	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "endthread = %s", (endthread) ? "true" : "false");
 
 	// keep checking the 
 	while (!endthread) {
 		// find the current voltage, the regulator is based on the
 		// voltage, not the temperature
-		double	v = voltage();
-		double	target = temperature2voltage(_settemperature);
-		
+		current_temperature = temperature();
 		qhydebug(LOG_DEBUG, DEBUG_LOG, 0,
-			"new round v = %f, target = %f", v, target);
+			"new round temp = %f, settemp = %f",
+			current_temperature, _settemperature);
 
 		// now update the state variables of the controller
 		previous_error = current_error;
-		current_error = v - target;
-		integral += current_error;
-		double	differential = current_error - previous_error;
+		current_error = current_temperature - _settemperature;
+		previous_differential = differential;
+		double	differential = (current_error - previous_error) / dt;
 
 		// regulator code: compute the new PWM value
-#if 0
-		if (v > temperature2voltage(_settemperature + 5)) {
-			pwm(newpwm(pwm() + 5, 255));
-		} else if (v > temperature2voltage(_settemperature + 1)) {
-			pwm(newpwm(pwm() + 1, 255));
-		} else if (v > temperature2voltage(_settemperature + 0.1)) {
-			pwm(newpwm(pwm() + 0.1, 255));
-		}
-		if (v < temperature2voltage(_settemperature - 5)) {
-			pwm(newpwm(pwm() - 5, 255));
-		} else if (v < temperature2voltage(_settemperature - 1)) {
-			pwm(newpwm(pwm() - 1, 255));
-		} else if (v < temperature2voltage(_settemperature - 0.1)) {
-			pwm(newpwm(pwm() - 0.1, 255));
-		}
-#endif
-		control += Kp * current_error
-			+ Ki * integral + Kd * differential;
+		double	d_control
+			= k_P * (current_error - previous_error)
+			+ k_I * current_error * dt
+			+ k_D * (previous_differential - differential);
+		control += d_control;
 		qhydebug(LOG_DEBUG, DEBUG_LOG, 0,
-			"error: %f, integral: %f, diff: %f, control: %f",
-			current_error, integral, differential, control);
+			"error: %f, diff: %f, d_control: %f, control: %f",
+			current_error, differential, d_control, control);
 
 		// compute a pwm value that can actuall be applied to the
 		// the chip
@@ -522,6 +520,7 @@ void	PDC201::main() {
  */
 void	PDC201::startCooler() {
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "startCooler called");
+
 	// lock the mutex to ensure we are the only ones manipulating
 	// the thread resources
 	Locker	locker(&mutex);
@@ -546,10 +545,11 @@ void	PDC201::startCooler() {
 
 	// if we get to this point, the we were successful starting the new
 	// thread
+	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "set _cooler to true");
 	_cooler = true;
 
 	// release the lock 
-	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "regulator thread started");
+	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "regulator thread created");
 }
 
 /**

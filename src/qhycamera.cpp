@@ -148,7 +148,7 @@ int	qhycamera_main(int argc, char *argv[]) {
 int	main(int argc, char *argv[]) {
 	try {
 		return qhy::qhycamera_main(argc, argv);
-	} catch (const std::runtime_error& x) {
+	} catch (const std::exception& x) {
 		std::cerr << "error in qhycamera: " << x.what() << std::endl;
 	}
 }

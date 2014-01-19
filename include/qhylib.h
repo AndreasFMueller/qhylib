@@ -107,7 +107,7 @@ public:
 	 * \brief Retrieve the current temperature of the CCD chip
 	 */
 	virtual double	temperature() = 0;
-private:
+protected:
 	/**
 	 * \brief Flag indicationg whether a regulator is active
  	 */
