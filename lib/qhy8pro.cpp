@@ -96,14 +96,20 @@ void	Qhy8Pro::mode(const BinningMode& m) {
 void	Qhy8Pro::demux(ImageBuffer& image, const Buffer& buffer) {
 	if (_mode == BinningMode(1, 1)) {
 		demux11(image, buffer);
+		image.active(ImageRectangle(ImagePoint(28, 0),
+				ImageSize(3038, 2024)));
 		return;
 	}
 	if (_mode == BinningMode(2, 2)) {
 		demux22(image, buffer);
+		image.active(ImageRectangle(ImagePoint(16, 0),
+				ImageSize(1520, 1012)));
 		return;
 	}
 	if (_mode == BinningMode(4, 4)) {
 		demux44(image, buffer);
+		image.active(ImageRectangle(ImagePoint(8, 0),
+				ImageSize(760, 506)));
 		return;
 	}
 }

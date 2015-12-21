@@ -122,10 +122,14 @@ int	qhycamera_main(int argc, char *argv[]) {
 
 	double	endtime = gettime();
 
-	long	size = image->size();
+	ImageSize	size = image->image_size();
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0,
-		"image size: %d x %d, size %ld, (%f seconds)",
-		image->width(), image->height(), size, endtime - starttime);
+		"image size: %d x %d, (%f seconds)",
+		size.width(), size.height(), endtime - starttime);
+
+	ImageBufferPtr	result = image->active_buffer();
+	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "active size: %d x %d",
+		result->width(), result->height());
 
 	// write the image data to 
 	unlink(filename);
@@ -133,11 +137,11 @@ int	qhycamera_main(int argc, char *argv[]) {
 	int	status = 0;
 	fits_create_file(&fits, filename, &status);
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "fits file %s created\n", filename);
-	long	naxes[2] = { image->width(), image->height() };
+	long	naxes[2] = { result->width(), result->height() };
 	fits_create_img(fits, SHORT_IMG, 2, naxes, &status);
 	long	fpixel[2] = { 1, 1 };
 	fits_write_pix(fits, TUSHORT, fpixel, image->npixels(),
-		image->pixelbuffer(), &status);
+		result->pixelbuffer(), &status);
 	fits_close_file(fits, &status);
 
 	return EXIT_SUCCESS;

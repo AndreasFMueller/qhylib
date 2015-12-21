@@ -159,6 +159,11 @@ public:
 	const int&	y() const { return second; }
 	int&	x() { return first; }
 	int&	y() { return second; }
+	ImagePoint&	operator=(const ImagePoint& other) {
+		this->x() = other.x();
+		this->y() = other.y();
+		return *this;
+	}
 };
 
 /**
@@ -172,7 +177,35 @@ public:
 	const int&	height() const { return second; }
 	int&	width() { return first; }
 	int&	height() { return second; }
+	ImageSize&	operator=(const ImageSize& other) {
+		this->width() = other.width();
+		this->height() = other.height();
+		return *this;
+	}
+	bool	empty() const { return ((width() == 0) || (height() == 0)); }
+	unsigned long	length() const { return width() * height(); }
 };
+
+/**
+ * \brief Image rectangle class
+ */
+class ImageRectangle {
+public:
+	ImagePoint	origin;
+	ImageSize	size;
+	ImageRectangle(const ImagePoint o, const ImageSize s)
+		: origin(o), size(s) { }
+	ImageRectangle() : origin(0, 0), size(0, 0) { }
+	ImageRectangle&	operator=(const ImageRectangle& other) {
+		origin = other.origin;
+		size = other.size;
+		return *this;
+	}
+	bool	empty() const { return size.empty(); }
+};
+
+class ImageBuffer;
+typedef std::shared_ptr<ImageBuffer>	ImageBufferPtr;
 
 /**
  * \brief Image Buffer returned by the camera
@@ -225,9 +258,27 @@ public:
 	unsigned short&	p(const ImagePoint& q) { return p(q.x(), q.y()); }
 	const unsigned char&	operator[](unsigned int i) const;
 	unsigned char&	operator[](unsigned int i);
+private:
+	ImageRectangle	_active;
+public:
+	const ImageRectangle&	active() const { return _active; }
+	void	active(const ImageRectangle& a) { _active = a; }
+	const ImagePoint&	active_origin() const { return _active.origin; }
+	const ImageSize&	active_size() const { return _active.size; }
+	void	active_origin(const ImagePoint& a) { _active.origin = a; }
+	void	active_size(const ImageSize& s) { _active.size = s; }
+	unsigned short	ap(unsigned int x, unsigned int y) const;
+	unsigned short	ap(const ImagePoint& q) { return ap(q.x(), q.y()); }
+	ImageSize	image_size() const {
+		return (_active.empty()) ? ImageSize(width(), height())
+			: _active.size;
+	}
+	unsigned short	pixel(unsigned int x, unsigned int y) const;
+	unsigned short	pixel(const ImagePoint& q) {
+		return pixel(q.x(), q.y());
+	}
+	ImageBufferPtr	active_buffer() const;
 };
-
-typedef std::shared_ptr<ImageBuffer>	ImageBufferPtr;
 
 /**
  * \brief Binning mode class
@@ -239,17 +290,6 @@ public:
 	const int&	y() const { return second; }
 	int&	x() { return first; }
 	int&	y() { return second; }
-};
-
-/**
- * \brief Image rectangle class
- */
-class ImageRectangle {
-public:
-	ImagePoint	origin;
-	ImageSize	size;
-	ImageRectangle(const ImagePoint o, const ImageSize s)
-		: origin(o), size(s) { }
 };
 
 /**
