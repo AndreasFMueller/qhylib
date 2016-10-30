@@ -14,6 +14,8 @@ namespace qhy {
 
 extern void     logbuffer(const unsigned char *data, int length);
 
+#define CONTROL_TIMEOUT	500
+
 /**
  * \brief Create a camera object
  */
@@ -42,8 +44,8 @@ void	PCamera::sendregisters() {
 		patch_size, transfer_size, total_patches, patch_number);
 
 	// send the control request to the camera
-	_device.controlwrite(0xb5, 0, 0, block.block(), 64, 500);
-	//_device.controlwrite(0xb5, 0, 0, block.block(), 64, 500);
+	_device.controlwrite(0xb5, 0, 0, block.block(), 64, CONTROL_TIMEOUT);
+	//_device.controlwrite(0xb5, 0, 0, block.block(), 64, CONTROL_TIMEOUT);
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "control transfer complete");
 }
 
@@ -117,7 +119,8 @@ int	PCamera::readpatches(Buffer& target) {
 	int	transferred;
 	int	totalbytes = 0;
 	for (int patchno = 0; patchno < total_patches; patchno++) {
-		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "reading %d bytes", patch_size);
+		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "reading %d bytes",
+			patch_size);
 		transferred = _device.read(buffer.data(), patch_size, timeout);
 //logbuffer(buffer.data(), patch_size);
 
@@ -152,7 +155,7 @@ void	PCamera::startExposure() {
 	// start video 
 	unsigned char	buf[1];
 	buf[0] = 100;
-	_device.controlwrite(0xb3, 0, 0, buf, 1, 500);
+	_device.controlwrite(0xb3, 0, 0, buf, 1, CONTROL_TIMEOUT);
 }
 
 /**
