@@ -18,7 +18,7 @@
 
 namespace qhy {
 
-#define	DC201_TIMEOUT	1000
+#define	DC201_TIMEOUT	10000
 
 const unsigned char	PDC201::read_endpoint = 0x81;
 const unsigned char	PDC201::write_endpoint = 0x01;
