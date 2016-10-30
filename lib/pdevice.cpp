@@ -28,6 +28,8 @@ PDevice::PDevice(unsigned short idVendor, unsigned short idProduct) {
 	// initialize the USB context for this device
 	int	rc = libusb_init(&ctx);
 	if (rc) {
+		qhydebug(LOG_ERR, DEBUG_LOG, 0, "cannot init USB: %s (%d)",
+			libusb_strerror((enum libusb_error)rc), rc),
 		throw USBError(rc);
 	}
 
@@ -85,6 +87,8 @@ PDevice::PDevice(unsigned short idVendor, unsigned short idProduct) {
 	// claim the interface
 	rc = libusb_claim_interface(handle, 0);
 	if (rc) {
+		qhydebug(LOG_ERR, DEBUG_LOG, 0, "cannot claim interface 0: %s",
+			libusb_strerror((enum libusb_error)rc));
 		libusb_close(handle);
 		libusb_exit(ctx);
 		throw USBError(rc);
@@ -143,8 +147,9 @@ int	PDevice::controltransfer(uint8_t bmRequestType, uint8_t bRequest,
 	int	rc = libusb_control_transfer(handle, bmRequestType, bRequest,
 			wValue, wIndex, data, wLength, timeout);
 	if (rc < 0) {
-		qhydebug(LOG_ERR, DEBUG_LOG, 0, "control transfer failed: %d",
-			rc);
+		qhydebug(LOG_ERR, DEBUG_LOG, 0,
+			"control transfer failed: %s (%d)",
+			libusb_strerror((enum libusb_error)rc), rc);
 		throw USBError(rc);
 	}
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "%d bytes transferred", rc);
@@ -159,7 +164,12 @@ int	PDevice::controlread(uint8_t bRequest, uint16_t wValue,
 		uint16_t wLength, unsigned int timeout) {
 	int	rc = controltransfer(0xc0, bRequest, wValue, wIndex,
 		data, wLength, timeout);
-	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "receive buffer:");
+	if (rc < 0) {
+		qhydebug(LOG_ERR, DEBUG_LOG, 0, "cannot read control: %s",
+			libusb_strerror((enum libusb_error)rc));
+	} else {
+		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "receive buffer:");
+	}
 	logbuffer(data, wLength);
 	return rc;
 }
@@ -185,7 +195,8 @@ int	PDevice::transfer(unsigned char ep, unsigned char *buffer,
 	int	rc = libusb_bulk_transfer(handle, ep, buffer, length,
 			&transferred, timeout);
 	if (rc < 0) {
-		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "transfer failed: %d", rc);
+		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "transfer failed: %s (%d)",
+			libusb_strerror((enum libusb_error)rc), rc);
 		throw USBError(rc);
 	}
 	return transferred;

@@ -44,6 +44,7 @@ Qhy8Pro::Qhy8Pro(PDevice &device) : CameraOld(device) {
 	binningmodes.insert(BinningMode(1, 1));
 	binningmodes.insert(BinningMode(2, 2));
 	binningmodes.insert(BinningMode(4, 4));
+	bayer("GBRG");
 }
 
 /**

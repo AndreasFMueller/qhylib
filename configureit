@@ -1,7 +1,7 @@
 #
 # sample configuration used in development
 #
-CFLAGS="-Wall -O2 -g"
-CXXFLAGS="-Wall -O2 -g --std=c++11"
+CFLAGS="-Wall -O2 -g -I/usr/local/include"
+CXXFLAGS="-Wall -O2 -g --std=c++11 -I/usr/local/include"
 export CFLAGS CXXFLAGS
 ./configure --enable-rangecheck

@@ -27,7 +27,7 @@
 #include <sys/time.h>
 #endif /* HAVE_SYS_TIME_H */
 
-#include <pthread.h>
+#include <thread>
 
 int	qhydebuglevel = LOG_ERR;
 

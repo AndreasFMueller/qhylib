@@ -11,9 +11,10 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
-#ifdef HAVE_PTHREAD_H
-#include <pthread.h>
-#endif /* HAVE_PTHREAD_H */
+
+#include <mutex>
+#include <condition_variable>
+#include <thread>
 
 // qhylib headers
 #include <qhylib.h>
@@ -59,6 +60,10 @@ protected:
 	unsigned int	write(const unsigned char *buffer, unsigned int length);
 private:
 	void	setFanPwm();
+
+	// prevent copying
+	PDC201(const PDC201& other);
+	PDC201&	operator=(const PDC201& other);
 public:
 	PDC201(PDevice& device);
 	virtual ~PDC201();
@@ -74,9 +79,9 @@ private:
 	double	temperature2voltage(double temperature);
 
 	// members to handle the regulator thread
-	pthread_t	thread;
-	pthread_mutex_t	mutex;
-	pthread_cond_t	cond;
+	std::thread	_thread;
+	std::recursive_mutex	_mutex;
+	std::condition_variable_any	_cond;
 	volatile bool	endthread;
 	bool	interruptiblesleep(double seconds);
 	double	cooltolimit(double limit);

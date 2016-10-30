@@ -311,6 +311,11 @@ public:
 	virtual	void	mode(const BinningMode& m) = 0;
 	virtual ImageSize	imagesize() const = 0;
 protected:
+	std::string	_bayer;
+	void	bayer(const std::string& b) { _bayer = b; }
+public:
+	const std::string&	bayer() const { return _bayer; }
+protected:
 	double	_exposuretime;
 public:
 	const double&	exposuretime() const { return _exposuretime; }

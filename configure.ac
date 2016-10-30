@@ -21,6 +21,16 @@ AC_PROG_LIBTOOL
 AC_CHECK_LIB([m], [sqrt])
 AC_CHECK_LIB([usb-1.0], [libusb_bulk_transfer])
 
+# if cfits is installed with pkginfo, we use that
+if pkg-config --exists cfitsio
+then
+        LIBS="${LIBS} `pkg-config --libs cfitsio`"
+        CXXFLAGS="${CXXFLAGS} `pkg-config --cflags cfitsio`"
+else
+AC_CHECK_LIB([cfitsio], [ftffrw_])
+fi
+
+
 # probe for some special functions that not all USB library versions have
 AC_CHECK_FUNC([libusb_strerror],[
 AC_DEFINE([HAVE_LIBUSB_STRERROR], 1, [libusb has libusb_strerror function])

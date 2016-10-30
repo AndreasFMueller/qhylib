@@ -26,6 +26,9 @@ Camera&	PDevice::camera() {
 	int	rc = libusb_get_device_descriptor(libusb_get_device(handle),
 			&desc);
 	if (rc < 0) {
+		qhydebug(LOG_ERR, DEBUG_LOG, 0,
+			"cann0t get device descriptor: %s",
+			libusb_strerror((enum libusb_error)rc));
 		throw USBError(rc);
 	}
 	if (desc.idVendor != 0x1618) {

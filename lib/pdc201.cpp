@@ -7,14 +7,8 @@
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#ifdef HAVE_MATH_H
-#include <math.h>
-#endif /* HAVE_MATH_H */
-
-#ifdef HAVE_PTHREAD_H
-#include <pthread.h>
-#endif /* HAVE_PTHREAD_H */
-
+#include <cmath>
+#include <chrono>
 #include <qhylib.h>
 #include <device.h>
 #include <qhydebug.h>
@@ -23,24 +17,6 @@
 #include <libusb-1.0/libusb.h>
 
 namespace qhy {
-
-/**
- * \brief Locker class
- *
- * Auxiliary class to take care of locks when the go out of scope
- */
-class Locker {
-	pthread_mutex_t	*_lock;
-public:
-	Locker(pthread_mutex_t *lock) : _lock(lock) {
-		pthread_mutex_lock(_lock);
-		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "lock acquired");
-	}
-	~Locker() {
-		pthread_mutex_unlock(_lock);
-		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "lock released");
-	}
-};
 
 #define	DC201_TIMEOUT	1000
 
@@ -58,16 +34,6 @@ PDC201::PDC201(PDevice& device) : _device(device) {
 	_fan = false;
 	setFanPwm();
 
-	// initialize the lock and conditation variable
-	pthread_mutexattr_t	mattr;
-	pthread_mutexattr_init(&mattr);
-	pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&mutex, &mattr);
-	pthread_mutex_unlock(&mutex);
-	pthread_condattr_t	cattr;
-	pthread_condattr_init(&cattr);
-	pthread_cond_init(&cond, &cattr);
-
 	// set temperature to something that we can always achieve
 	_cooler = false;
 	_settemperature = 273.15;
@@ -79,17 +45,13 @@ PDC201::PDC201(PDevice& device) : _device(device) {
 PDC201::~PDC201() {
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "destructor called");
 	// lock the mutexes
-	pthread_mutex_lock(&mutex);
+	std::unique_lock<std::recursive_mutex>	(_mutex);
 
 	// stop the thread if it is running
 	if (cooler()) {
 		stopCooler();
 	}
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "temp regulator thread stopped");
-
-	// destroy the resources
-	pthread_cond_destroy(&cond);
-	pthread_mutex_destroy(&mutex);
 }
 
 /**
@@ -101,8 +63,9 @@ unsigned int	PDC201::transfer(unsigned char endpoint,
 	//	"transfer request for %lu bytes, endpoint %02x",
 	//	length, endpoint);
 	int	transferred_length;
-	int	rc = libusb_bulk_transfer(_device.handle, endpoint,
-			buffer, length, &transferred_length, DC201_TIMEOUT);
+	int	rc = libusb_bulk_transfer(_device.handle,
+			endpoint, buffer, length, &transferred_length,
+			DC201_TIMEOUT);
 	if (rc) {
 		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "transfer failed: %s",
 			usbcause(rc).c_str());
@@ -268,10 +231,14 @@ void	PDC201::settemperature(const double& t) {
  * This function just hands over control to the main function of the DC201
  * class.
  */
-void	*cooler_main(void *arg) {
-	PDC201	*dc201 = (PDC201 *)arg;
-	dc201->main();
-	return arg;
+void	cooler_main(void *arg) {
+	try {
+		PDC201	*dc201 = (PDC201 *)arg;
+		dc201->main();
+	}  catch (const std::exception& x) {
+		qhydebug(LOG_ERR, DEBUG_LOG, 0, "cooler thread failed: %s",
+			x.what());
+	}
 }
 
 /**
@@ -301,35 +268,26 @@ static unsigned char	newpwm(double p, unsigned char max) {
 bool	PDC201::interruptiblesleep(double seconds) {
 	// create a locally used mutex, because the cond variable functions
 	// need one.
-	pthread_mutex_t	tmutex;
-	pthread_mutex_init(&tmutex, NULL);
+	std::recursive_mutex	tmutex;
 
 	// compute the time specification for the end of the wait
-	struct timeval	tv;
-	gettimeofday(&tv, NULL);
-	struct timespec	ts;
-	ts.tv_sec = tv.tv_sec + floor(seconds);
-	ts.tv_nsec = tv.tv_usec * 1000 + (seconds - floor(seconds)) * 1000000000;
-	if (ts.tv_nsec > 1000000000) {
-		ts.tv_sec += ts.tv_nsec / 1000000000;
-		ts.tv_nsec = ts.tv_nsec % 1000000000;
-	}
+	long long	d = floor(1000000000 * seconds);
+	std::chrono::nanoseconds	timeout(d);
 
 	// wait for the timeout, or the signal
-	pthread_mutex_lock(&tmutex);
-	int	rc = pthread_cond_timedwait(&cond, &tmutex, &ts);
+	std::unique_lock<std::recursive_mutex>	lock(tmutex);
+	std::cv_status	status = _cond.wait_for(lock, timeout);
 	bool	result = false;
-	if (rc) {
+	switch (status) {
+	case std::cv_status::timeout:
 		//qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "wait timed out");
 		result = false;
-	} else {
+		break;
+	case std::cv_status::no_timeout:
 		//qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "condition signaled");
 		result = true;
+		break;
 	}
-
-	// cleanup the mutex
-	pthread_mutex_unlock(&tmutex);
-	pthread_mutex_destroy(&tmutex);
 	return result;
 }
 
@@ -391,9 +349,10 @@ void	PDC201::main() {
 	
 	// we lock the mutx, which will block the thread until the mutex
 	// is release in the startCooler method
-	pthread_mutex_lock(&mutex);
-	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "start the regulator thread");
-	pthread_mutex_unlock(&mutex);
+	{
+		std::unique_lock<std::recursive_mutex>	lock(_mutex);
+		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "start the regulator thread");
+	}
 
 	// the following code implements a PID controller for the temperature
 	// A PID controller needs the integral and the derivative of the
@@ -523,7 +482,7 @@ void	PDC201::startCooler() {
 
 	// lock the mutex to ensure we are the only ones manipulating
 	// the thread resources
-	Locker	locker(&mutex);
+	std::unique_lock<std::recursive_mutex>	lock(_mutex);
 
 	// if the cooler is already turned on, just return
 	if (cooler()) {
@@ -537,9 +496,11 @@ void	PDC201::startCooler() {
 	endthread = false;
 
 	// ok, the cooler is not on, so we start a new thread
-	if (pthread_create(&thread, NULL, cooler_main, this)) {
-		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "cannot launch the thread");
-		pthread_mutex_unlock(&mutex);
+	try {
+		_thread = std::thread(cooler_main, this);
+	} catch (std::exception& x) {
+		qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "cannot launch thread: %s",
+			x.what());
 		throw std::runtime_error("cannot start thread");
 	}
 
@@ -557,7 +518,7 @@ void	PDC201::startCooler() {
  */
 void	PDC201::stopCooler() {
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "stopCooler called");
-	Locker	locker(&mutex);
+	std::unique_lock<std::recursive_mutex>	lock(_mutex);
 
 	// if there is no cooler, just return
 	if (!cooler()) {
@@ -567,11 +528,10 @@ void	PDC201::stopCooler() {
 
 	// signal to the thread to stop
 	endthread = true;
-	pthread_cond_signal(&cond);
+	_cond.notify_all();
 
 	// join the thread
-	void	*result;
-	pthread_join(thread, &result);
+	_thread.join();
 
 	qhydebug(LOG_DEBUG, DEBUG_LOG, 0, "thread has terminated");
 	
